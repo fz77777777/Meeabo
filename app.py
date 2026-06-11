@@ -1,16 +1,20 @@
 import streamlit as st
 import pandas as pd
-# IMPORTANT: Using curl_cffi instead of normal requests to bypass Meesho/Cloudflare blocks
-from curl_cffi import requests
+import requests
 from bs4 import BeautifulSoup
+import urllib.parse
 import re
 
 st.set_page_config(page_title="Meesho Winning Product Finder", layout="wide")
-st.title("🔥 Meesho Timeline-Based Winning Product Finder (Anti-Block)")
-st.write("This updated version mimics a real Google Chrome browser to bypass Meesho's security blocks.")
+st.title("🛡️ Meesho Timeline-Based Product Hunter (ScraperAPI Version)")
+st.write("This stable version uses ScraperAPI's premium proxies to bypass Meesho's security blocks completely.")
 
 # Sidebar Options
-st.sidebar.header("Search & Timeline Parameters")
+st.sidebar.header("Configuration & Timeline")
+# ScraperAPI Key Input Box
+api_key = st.sidebar.text_input("Enter your ScraperAPI Key:", type="password")
+st.sidebar.markdown("[Get a Free API Key here](https://www.scraperapi.com/) (5,000 free credits/month)")
+
 keyword_input = st.sidebar.text_input("Enter Meesho Category/Keyword:", "kurti set")
 
 timeline_history = st.sidebar.selectbox(
@@ -18,7 +22,7 @@ timeline_history = st.sidebar.selectbox(
     ["1 Month Pehle (Freshly Viral)", "2 Month Pehle (Steady Winners)", "3 Month Pehle (Established Blockbusters)"]
 )
 
-def hunt_meesho_by_timeline(keyword, timeline):
+def hunt_meesho_by_proxy(keyword, timeline, key):
     products_list = []
     
     # Setting dynamic rating range based on selected timeline
@@ -35,12 +39,14 @@ def hunt_meesho_by_timeline(keyword, timeline):
     clean_keyword = keyword.replace(' ', '-')
     search_url = f"https://www.meesho.com/search?q={clean_keyword}"
     
+    # Routing Meesho request through ScraperAPI
+    proxy_url = f"http://api.scraperapi.com?api_key={key}&url={urllib.parse.quote(search_url)}"
+    
     try:
-        # Bypassing Cloudflare/Meesho Firewall by impersonating Google Chrome
-        response = requests.get(search_url, impersonate="chrome", timeout=20)
+        response = requests.get(proxy_url, timeout=30)
         
         if response.status_code != 200:
-            st.error(f"Meesho server returned status code: {response.status_code}. Security layer is tight.")
+            st.error(f"Proxy issue or invalid key (Status: {response.status_code}). Please check your ScraperAPI dashboard credits.")
             return pd.DataFrame()
             
         soup = BeautifulSoup(response.text, 'html.parser')
@@ -54,10 +60,10 @@ def hunt_meesho_by_timeline(keyword, timeline):
         product_cards = list(set(product_cards))
         
         if not product_cards:
-            st.warning("Could not parse products. Meesho layout might have changed or blocking is active.")
+            st.warning("Could not parse products. Please double-check if your search keyword is valid on Meesho.")
             return pd.DataFrame()
             
-        st.write(f"Found {len(product_cards)} raw products. Filtering for {timeline}...")
+        st.write(f"Found {len(product_cards)} products on Meesho search page. Filtering for {timeline}...")
         
         for card in product_cards[:30]: 
             link = f"https://www.meesho.com{card['href']}"
@@ -90,15 +96,17 @@ def hunt_meesho_by_timeline(keyword, timeline):
                 })
                 
     except Exception as e:
-        st.error(f"Error occurred while searching: {e}")
+        st.error(f"Error occurred while connecting via proxy: {e}")
         
     return pd.DataFrame(products_list)
 
 # Button Execution
-if st.sidebar.button("Start Timeline Trend Hunt 🚀"):
-    if keyword_input:
-        with st.spinner(f"Simulating human browser connection and scanning Meesho for listings {timeline_history}..."):
-            df_meesho = hunt_meesho_by_timeline(keyword_input, timeline_history)
+if st.sidebar.button("Start Secured Trend Hunt 🚀"):
+    if not api_key:
+        st.error("⚠️ Sidebar me apni ScraperAPI Key paste kijiye!")
+    elif keyword_input:
+        with st.spinner(f"Routing through residential proxies and scanning Meesho for listings {timeline_history}..."):
+            df_meesho = hunt_meesho_by_proxy(keyword_input, timeline_history, api_key)
             
         if not df_meesho.empty:
             st.success(f"Boom! Found {len(df_meesho)} Winning Products matching your timeline!")
@@ -112,4 +120,4 @@ if st.sidebar.button("Start Timeline Trend Hunt 🚀"):
                 mime='text/csv',
             )
         else:
-            st.warning("Is timeline par abhi koi active winner nahi dikha. Timeline change karke dekhein ya koi doosra keyword try karein!")
+            st.warning("Is timeline aur keyword par filhal koi product match nahi hua. Timeline dropdown change karke ya koi naya keyword daal kar check karein!")
