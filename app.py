@@ -6,8 +6,8 @@ import urllib.parse
 import re
 
 st.set_page_config(page_title="Meesho Winning Product Finder", layout="wide")
-st.title("🛡️ Meesho Timeline-Based Product Hunter (Strict Indian Proxy)")
-st.write("This stable version routes traffic strictly through Indian Residential Proxies via ScraperAPI to unblock Meesho.")
+st.title("🛡️ Meesho Product Hunter (Optimized Rating Filters)")
+st.write("This version has lowered rating limits to capture fresh winning products matching your 4-order-to-1-rating ratio.")
 
 # Sidebar Options
 st.sidebar.header("Configuration & Timeline")
@@ -21,36 +21,36 @@ timeline_history = st.sidebar.selectbox(
     ["1 Month Pehle (Freshly Viral)", "2 Month Pehle (Steady Winners)", "3 Month Pehle (Established Blockbusters)"]
 )
 
-def hunt_meesho_by_india_proxy(keyword, timeline, key):
+def hunt_meesho_by_india_proxy_optimized(keyword, timeline, key):
     products_list = []
     
-    # Setting dynamic rating range based on selected timeline
+    # CRITICAL FIX: Lowered and optimized rating brackets as per your feedback
     if "1 Month" in timeline:
-        min_rating, max_rating = 100, 900
+        min_rating, max_rating = 15, 100
         age_label = "~1 Month Ago (Newly Viral)"
     elif "2 Month" in timeline:
-        min_rating, max_rating = 901, 2500
+        min_rating, max_rating = 101, 400
         age_label = "~2 Months Ago (Steady Orders)"
     else:
-        min_rating, max_rating = 2501, 6000
+        min_rating, max_rating = 401, 1500
         age_label = "~3 Months Ago (Mega Blockbuster)"
         
     clean_keyword = keyword.replace(' ', '-')
     search_url = f"https://www.meesho.com/search?q={clean_keyword}"
     
-    # CRITICAL FIX: Added country_code=in to force ScraperAPI to use Indian IPs
+    # Strictly routing through Indian residential proxies
     proxy_url = f"http://api.scraperapi.com?api_key={key}&url={urllib.parse.quote(search_url)}&country_code=in"
     
     try:
         response = requests.get(proxy_url, timeout=35)
         
         if response.status_code != 200:
-            st.error(f"Proxy issue or invalid key (Status: {response.status_code}). Please check your ScraperAPI credits.")
+            st.error(f"Proxy issue or invalid key (Status: {response.status_code}). Please check your ScraperAPI dashboard credits.")
             return pd.DataFrame()
             
         soup = BeautifulSoup(response.text, 'html.parser')
         
-        # ADVANCED PARSING FIX: Fallback selectors for Meesho product blocks
+        # Enhanced parsing lookup for link structures
         product_cards = []
         for a in soup.find_all('a', href=True):
             if '/p/' in a['href']:
@@ -59,12 +59,12 @@ def hunt_meesho_by_india_proxy(keyword, timeline, key):
         product_cards = list(set(product_cards))
         
         if not product_cards:
-            st.warning("Could not find any product tags. Retrying with a different Indian proxy might help. Try pressing the button again.")
+            st.warning("Could not find any product tags. Please wait a few seconds and try pressing the button again.")
             return pd.DataFrame()
             
-        st.write(f"Found {len(product_cards)} products on Meesho search page. Filtering for {timeline}...")
+        st.write(f"Found {len(product_cards)} raw products on page. Filtering items between {min_rating} and {max_rating} ratings...")
         
-        for card in product_cards[:30]: 
+        for card in product_cards[:40]: # Expanded search range to check more listings
             link = f"https://www.meesho.com{card['href']}"
             card_text = card.get_text()
             
@@ -74,7 +74,7 @@ def hunt_meesho_by_india_proxy(keyword, timeline, key):
             if ratings_match:
                 total_ratings = int(ratings_match.group(1).replace(',', ''))
             
-            # DYNAMIC TIMELINE FILTERING
+            # CHECKING AGAINST NEW ACCURATE RATINGS LIMIT
             if min_rating <= total_ratings <= max_rating:
                 # Extract Price
                 price_match = re.search(r'₹([\d,]+)', card_text)
@@ -104,8 +104,8 @@ if st.sidebar.button("Start Secured Indian Trend Hunt 🚀"):
     if not api_key:
         st.error("⚠️ Sidebar me apni ScraperAPI Key paste kijiye!")
     elif keyword_input:
-        with st.spinner(f"Routing through Indian Residential Proxies and scanning Meesho..."):
-            df_meesho = hunt_meesho_by_india_proxy(keyword_input, timeline_history, api_key)
+        with st.spinner(f"Connecting to Indian Residential Proxies and fetching low-rating viral items..."):
+            df_meesho = hunt_meesho_by_india_proxy_optimized(keyword_input, timeline_history, api_key)
             
         if not df_meesho.empty:
             st.success(f"Boom! Found {len(df_meesho)} Winning Products matching your timeline!")
@@ -119,4 +119,4 @@ if st.sidebar.button("Start Secured Indian Trend Hunt 🚀"):
                 mime='text/csv',
             )
         else:
-            st.warning("Is timeline aur keyword par filhal koi product match nahi hua. Ek baar timeline dropdown '1 Month' ya '2 Month' badal kar check karein!")
+            st.warning("Is selected bracket aur keyword par koi product match nahi hua. Ek baar timeline dropdown '2 Month Pehle' karke check karein ya keyword change karke click karein!")
