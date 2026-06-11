@@ -1,18 +1,18 @@
 import streamlit as st
 import pandas as pd
-import requests
+# IMPORTANT: Using curl_cffi instead of normal requests to bypass Meesho/Cloudflare blocks
+from curl_cffi import requests
 from bs4 import BeautifulSoup
 import re
 
 st.set_page_config(page_title="Meesho Winning Product Finder", layout="wide")
-st.title("🔥 Meesho Timeline-Based Winning Product Finder")
-st.write("This advanced tool filters fresh winning products based on when they were listed (1, 2, or 3 months ago) and their order volume.")
+st.title("🔥 Meesho Timeline-Based Winning Product Finder (Anti-Block)")
+st.write("This updated version mimics a real Google Chrome browser to bypass Meesho's security blocks.")
 
 # Sidebar Options
 st.sidebar.header("Search & Timeline Parameters")
 keyword_input = st.sidebar.text_input("Enter Meesho Category/Keyword:", "kurti set")
 
-# NEW FEATURE: Timeline Selection Dropdown
 timeline_history = st.sidebar.selectbox(
     "Select Product Listing Age:",
     ["1 Month Pehle (Freshly Viral)", "2 Month Pehle (Steady Winners)", "3 Month Pehle (Established Blockbusters)"]
@@ -35,15 +35,12 @@ def hunt_meesho_by_timeline(keyword, timeline):
     clean_keyword = keyword.replace(' ', '-')
     search_url = f"https://www.meesho.com/search?q={clean_keyword}"
     
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept-Language": "en-US,en;q=0.9"
-    }
-    
     try:
-        response = requests.get(search_url, headers=headers, timeout=15)
+        # Bypassing Cloudflare/Meesho Firewall by impersonating Google Chrome
+        response = requests.get(search_url, impersonate="chrome", timeout=20)
+        
         if response.status_code != 200:
-            st.error("Meesho server is busy or blocking requests. Please try after some time.")
+            st.error(f"Meesho server returned status code: {response.status_code}. Security layer is tight.")
             return pd.DataFrame()
             
         soup = BeautifulSoup(response.text, 'html.parser')
@@ -55,9 +52,14 @@ def hunt_meesho_by_timeline(keyword, timeline):
                 product_cards.append(a)
         
         product_cards = list(set(product_cards))
-        st.write(f"Found {len(product_cards)} products on the page. Filtering for {timeline}...")
         
-        for card in product_cards[:30]: # Scanning more items for wider filtering
+        if not product_cards:
+            st.warning("Could not parse products. Meesho layout might have changed or blocking is active.")
+            return pd.DataFrame()
+            
+        st.write(f"Found {len(product_cards)} raw products. Filtering for {timeline}...")
+        
+        for card in product_cards[:30]: 
             link = f"https://www.meesho.com{card['href']}"
             card_text = card.get_text()
             
@@ -95,7 +97,7 @@ def hunt_meesho_by_timeline(keyword, timeline):
 # Button Execution
 if st.sidebar.button("Start Timeline Trend Hunt 🚀"):
     if keyword_input:
-        with st.spinner(f"Scanning Meesho database for items listed {timeline_history}..."):
+        with st.spinner(f"Simulating human browser connection and scanning Meesho for listings {timeline_history}..."):
             df_meesho = hunt_meesho_by_timeline(keyword_input, timeline_history)
             
         if not df_meesho.empty:
@@ -110,4 +112,4 @@ if st.sidebar.button("Start Timeline Trend Hunt 🚀"):
                 mime='text/csv',
             )
         else:
-            st.warning("Is selected timeline aur keyword par matching products nahi mile. Try another timeline or a generic keyword like 'saree' or 'tshirt'.")
+            st.warning("Is timeline par abhi koi active winner nahi dikha. Timeline change karke dekhein ya koi doosra keyword try karein!")
